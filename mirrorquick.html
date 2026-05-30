@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>AI Salon Consultation</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+    <style>
+        :root {
+
+            --neon-blue: #00f0ff;
+            --neon-pink: #ff007f;
+            --neon-green: #00ff66;
+
+            --dark: #030308;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+
+            font-family: 'Courier New', monospace;
+        }
+
+        body,
+        html {
+
+            width: 100%;
+            height: 100%;
+
+            overflow: hidden;
+
+            background: var(--dark);
+            color: white;
+        }
+
+        .viewport {
+
+            position: relative;
+
+            width: 100vw;
+            height: 100vh;
+
+            overflow: hidden;
+        }
+
+        #webcam {
+
+            position: absolute;
+
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            object-fit: cover;
+
+            transform: scaleX(-1);
+
+            z-index: 1;
+        }
+
+        .captured-face-frame {
+
+            position: absolute;
+
+            left: 0;
+            top: 0;
+
+            width: 50vw;
+            height: 100vh;
+
+            overflow: hidden;
+
+            z-index: 1;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .captured-face-frame img {
+
+            position: absolute;
+
+            width: 100%;
+            height: 100%;
+
+            object-fit: cover;
+
+            left: 0;
+            top: 0;
+        }
+
+        .vignette {
+
+            position: absolute;
+
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+
+            background:
+                radial-gradient(ellipse at center,
+                    transparent 25%,
+                    rgba(3, 3, 8, 0.85) 90%);
+
+            z-index: 2;
+            pointer-events: none;
+            transition: width 0.8s ease;
+        }
+
+        .laser-bar {
+
+            position: absolute;
+
+            left: 0;
+            top: 0;
+
+            width: 100vw;
+            height: 3px;
+
+            opacity: 0;
+
+            z-index: 5;
+
+            background:
+                linear-gradient(90deg,
+                    transparent,
+                    var(--neon-pink),
+                    transparent);
+
+            box-shadow:
+                0 0 20px var(--neon-pink);
+        }
+
+        .center-welcome-panel {
+
+            position: absolute;
+
+            top: 10%;
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            text-align: center;
+
+            z-index: 10;
+        }
+
+        .welcome-txt {
+
+            font-size: 2.2rem;
+
+            color: var(--neon-blue);
+
+            letter-spacing: 4px;
+
+            text-transform: uppercase;
+
+            margin-bottom: 10px;
+
+            text-shadow:
+                0 0 10px var(--neon-blue);
+        }
+
+        .sub-instruction {
+
+            color: white;
+
+            letter-spacing: 2px;
+        }
+
+        .interactive-canvas {
+
+            position: absolute;
+
+            left: 0;
+            top: 0;
+
+            width: 100vw;
+            height: 100vh;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            z-index: 10;
+            transition: width 0.8s ease;
+        }
+
+        .face-mesh-svg {
+
+            width: 420px;
+            height: 420px;
+        }
+
+        .alignment-oval {
+
+            cx: 100px;
+            cy: 110px;
+
+            rx: 65px;
+            ry: 85px;
+
+            fill: none;
+
+            stroke: var(--neon-blue);
+
+            stroke-width: 2.5;
+
+            stroke-dasharray: 10 5;
+
+            filter:
+                drop-shadow(0 0 10px var(--neon-blue));
+        }
+
+        .mesh-line {
+
+            stroke: var(--neon-blue);
+
+            stroke-width: 1;
+
+            stroke-dasharray: 4;
+
+            opacity: 0;
+        }
+
+        .biometric-dot {
+
+            fill: var(--neon-blue);
+
+            opacity: 0;
+        }
+
+        .spatial-tag {
+
+            position: absolute;
+
+            min-width: 180px;
+
+            padding: 0.8rem 1rem;
+
+            background:
+                rgba(0, 0, 0, 0.5);
+
+            border:
+                1px solid var(--neon-blue);
+
+            backdrop-filter: blur(10px);
+
+            opacity: 0;
+
+            z-index: 20;
+        }
+
+        #tagHair {
+            top: 6%;
+            left: 58%;
+        }
+
+        #tagStructure {
+            top: 28%;
+            left: 4%;
+        }
+
+        #tagTone {
+            top: 58%;
+            left: 60%;
+        }
+
+        #tagJawline {
+            bottom: 10%;
+            left: 20%;
+        }
+
+        .tag-label {
+
+            color: #7f93a5;
+
+            font-size: 0.7rem;
+        }
+
+        .tag-value {
+
+            margin-top: 4px;
+
+            font-weight: bold;
+        }
+
+        .primary-action-shell {
+
+            position: absolute;
+
+            bottom: 6%;
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            z-index: 10;
+        }
+
+        .scan-btn {
+
+            background: transparent;
+
+            border:
+                2px solid var(--neon-blue);
+
+            color: var(--neon-blue);
+
+            padding: 1rem 3rem;
+
+            letter-spacing: 3px;
+
+            cursor: pointer;
+
+            box-shadow:
+                0 0 15px rgba(0, 240, 255, 0.5);
+        }
+
+        .scan-btn:hover {
+
+            background: var(--neon-blue);
+
+            color: black;
+
+            transform: translateY(-2px);
+
+            box-shadow:
+                0 0 10px var(--neon-blue),
+                0 0 25px var(--neon-blue),
+                0 0 45px rgba(0, 240, 255, 0.7);
+        }
+
+        .qa-consultation-window {
+
+            position: absolute;
+
+            right: 0;
+            top: 0;
+
+            width: 50vw;
+            height: 100vh;
+
+            background:
+                rgba(3, 3, 8, 0.97);
+
+            padding: 4rem;
+
+            overflow-y: auto;
+
+            z-index: 50;
+
+            display: none;
+
+            opacity: 0;
+
+            transform: translateX(100%);
+        }
+
+        .qa-step-slide {
+
+            display: none;
+            opacity: 0;
+        }
+
+        .qa-step-slide.active-slide {
+
+            display: block;
+            opacity: 1;
+        }
+
+        .question-header {
+
+            color: var(--neon-blue);
+
+            margin-bottom: 2rem;
+
+            font-size: 1.1rem;
+
+            border-left:
+                3px solid var(--neon-pink);
+
+            padding-left: 12px;
+        }
+
+        .options-flex-grid {
+
+            display: flex;
+            flex-direction: column;
+
+            gap: 1rem;
+        }
+
+        .option-button-node {
+
+            background:
+                rgba(255, 255, 255, 0.03);
+
+            border:
+                1px solid rgba(0, 240, 255, 0.2);
+
+            padding: 1rem;
+
+            color: white;
+
+            cursor: pointer;
+
+            transition:
+                0.25s,
+                box-shadow 0.25s ease,
+                transform 0.25s ease;
+        }
+
+        .option-button-node:hover {
+
+            border-color: var(--neon-blue);
+
+            background:
+                rgba(0, 240, 255, 0.08);
+
+            transform: translateY(-3px);
+
+            box-shadow:
+                0 0 8px rgba(0, 240, 255, 0.5),
+                0 0 18px rgba(0, 240, 255, 0.45),
+                0 0 35px rgba(0, 240, 255, 0.35);
+
+            text-shadow:
+                0 0 5px var(--neon-blue),
+                0 0 10px var(--neon-blue);
+        }
+            .option-button-node:hover {
+    /* existing styles... */
+    color: var(--neon-blue);
+        }
+        .option-button-node.selected-choice {
+    border-color: var(--neon-blue);
+    background: rgba(0, 240, 255, 0.12);
+    color: var(--neon-blue);
+    transform: translateY(-2px);
+    box-shadow:
+        0 0 10px rgba(0, 240, 255, 0.6),
+        0 0 22px rgba(0, 240, 255, 0.5),
+        0 0 42px rgba(0, 240, 255, 0.35),
+        inset 0 0 12px rgba(0, 240, 255, 0.08);
+    text-shadow:
+        0 0 6px var(--neon-blue),
+        0 0 12px var(--neon-blue);
+}
+
+        .wizard-navigation-bar {
+
+            margin-top: 2rem;
+
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .nav-control-btn {
+
+            background: transparent;
+
+            border:
+                1px solid rgba(255, 255, 255, 0.2);
+
+            color: white;
+
+            padding: 0.7rem 1.5rem;
+
+            cursor: pointer;
+        }
+
+        .nav-control-btn:hover {
+
+            border-color: var(--neon-pink);
+
+            color: var(--neon-pink);
+
+            box-shadow:
+                0 0 8px rgba(255, 0, 127, 0.45),
+                0 0 20px rgba(255, 0, 127, 0.35);
+
+            text-shadow:
+                0 0 8px var(--neon-pink);
+        }
+
+        .suggestion-submit-trigger {
+
+            background: transparent;
+
+            border:
+                1px solid var(--neon-green);
+
+            color: var(--neon-green);
+
+            padding: 0.7rem 2rem;
+
+            display: none;
+
+            cursor: pointer;
+        }
+
+        .suggestion-submit-trigger:hover {
+
+            background: rgba(0, 255, 102, 0.08);
+
+            box-shadow:
+                0 0 10px rgba(0, 255, 102, 0.5),
+                0 0 25px rgba(0, 255, 102, 0.35);
+
+            text-shadow:
+                0 0 8px var(--neon-green);
+        }
+
+        .results-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(auto-fit, minmax(280px, 1fr));
+
+            gap: 1.5rem;
+        }
+
+        .recommendation-card {
+
+            background:
+                rgba(255, 255, 255, 0.03);
+
+            border:
+                1px solid rgba(0, 240, 255, 0.15);
+
+            border-radius: 14px;
+
+            padding: 2rem;
+
+            transition: 0.3s;
+
+            cursor: pointer;
+        }
+
+        .recommendation-card:hover {
+
+            transform: translateY(-5px);
+
+            border-color: var(--neon-blue);
+
+            box-shadow:
+                0 0 10px rgba(0, 240, 255, 0.35),
+                0 0 25px rgba(0, 240, 255, 0.25),
+                0 0 45px rgba(0, 240, 255, 0.15);
+        }
+
+        .recommendation-card.selected-preview {
+
+            border-color: var(--neon-green);
+
+            box-shadow:
+                0 0 25px rgba(0, 255, 102, 0.25);
+        }
+
+        .card-badge {
+
+            display: inline-block;
+
+            margin-bottom: 1rem;
+
+            padding: 0.3rem 0.7rem;
+
+            font-size: 0.7rem;
+        }
+
+        .badge-ai {
+
+            color: var(--neon-blue);
+
+            border:
+                1px solid var(--neon-blue);
+        }
+
+        .badge-expert {
+
+            color: var(--neon-pink);
+
+            border:
+                1px solid var(--neon-pink);
+        }
+
+        .style-title {
+
+            font-size: 1.1rem;
+
+            margin-bottom: 0.8rem;
+
+            font-weight: bold;
+        }
+
+        .style-desc {
+
+            color: #8a99ad;
+
+            line-height: 1.5;
+        }
+
+        .style-preview-shell {
+
+            width: 100%;
+
+            margin-top: 2rem;
+
+            padding: 2rem;
+
+            border-radius: 16px;
+
+            border:
+                1px solid rgba(0, 240, 255, 0.15);
+
+            background:
+                rgba(255, 255, 255, 0.02);
+
+            display: none;
+        }
+
+        .preview-style-name {
+
+            font-size: 1.6rem;
+
+            margin-bottom: 2rem;
+
+            font-weight: bold;
+        }
+
+        .multi-angle-preview-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, 1fr);
+
+            gap: 1.5rem;
+        }
+
+        .preview-angle-card {
+
+            position: relative;
+
+            height: 340px;
+
+            overflow: hidden;
+
+            border-radius: 16px;
+
+            border:
+                1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        .ai-preview-wrapper {
+
+            position: relative;
+
+            width: 100%;
+            height: 100%;
+        }
+
+        .base-face {
+
+            position: absolute;
+
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            object-fit: cover;
+        }
+
+        .hair-overlay {
+
+            position: absolute;
+
+            top: 2%;
+
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            width: 72%;
+
+            z-index: 2;
+
+            mix-blend-mode: screen;
+
+            pointer-events: none;
+        }
+
+        .angle-label {
+
+            position: absolute;
+
+            top: 10px;
+            left: 10px;
+
+            z-index: 10;
+
+            background:
+                rgba(0, 0, 0, 0.5);
+
+            padding: 0.3rem 0.8rem;
+
+            border:
+                1px solid rgba(0, 240, 255, 0.3);
+
+            font-size: 0.7rem;
+
+            letter-spacing: 2px;
+        }
+
+        .results-action-bar {
+
+            margin-top: 2rem;
+
+            display: flex;
+            justify-content: flex-end;
+
+            gap: 1rem;
+        }
+
+        /* ROUNDED CORNERS */
+        .option-button-node { border-radius: 16px; }
+        .scan-btn { border-radius: 18px; }
+        .nav-control-btn { border-radius: 14px; }
+        .suggestion-submit-trigger { border-radius: 14px; }
+        .question-header { border-radius: 10px; }
+        .spatial-tag { border-radius: 16px; }
+        .qa-consultation-window { border-top-left-radius: 28px; border-bottom-left-radius: 28px; }
+        .recommendation-card { border-radius: 22px; }
+        .style-preview-shell { border-radius: 24px; }
+        .preview-angle-card { border-radius: 22px; }
+        .angle-label { border-radius: 10px; }
+        .results-action-bar button { border-radius: 14px; }
+        .base-face, .hair-overlay { border-radius: 22px; }
+        .center-welcome-panel, .spatial-tag, .style-preview-shell, .recommendation-card, .option-button-node {
+            backdrop-filter: blur(12px);
+        }
+
+        /* ===== FEEDBACK SECTION ===== */
+        .feedback-section {
+            width: 100%;
+            margin-top: 3rem;
+            padding: 2rem;
+            border-radius: 24px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            background: rgba(255, 255, 255, 0.03);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            backdrop-filter: blur(12px);
+        }
+
+        .feedback-title {
+            font-size: 2rem;
+            color: var(--neon-blue);
+            margin-bottom: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-align: center;
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .feedback-question-block {
+            width: 100%;
+            margin-bottom: 2.5rem;
+        }
+
+        .feedback-question {
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            letter-spacing: 2px;
+        }
+
+        .feedback-options {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .feedback-option {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .feedback-option:hover {
+            border-color: var(--neon-blue);
+            box-shadow:
+                0 0 10px rgba(0, 240, 255, 0.4),
+                0 0 20px rgba(0, 240, 255, 0.3);
+            transform: translateY(-3px);
+        }
+
+        .feedback-textarea {
+            width: 100%;
+            min-height: 140px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 18px;
+            padding: 1rem;
+            color: white;
+            resize: none;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .feedback-textarea:focus {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+        }
+
+        .feedback-submit-btn {
+            background: transparent;
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            padding: 1rem 2rem;
+            border-radius: 18px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            transition: 0.3s;
+        }
+
+        .feedback-submit-btn:hover {
+            background: rgba(0, 255, 102, 0.08);
+            box-shadow:
+                0 0 10px rgba(0, 255, 102, 0.5),
+                0 0 25px rgba(0, 255, 102, 0.3);
+            transform: translateY(-3px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="viewport">
+
+        <video id="webcam" autoplay playsinline muted></video>
+
+        <div class="captured-face-frame" id="capturedFaceFrame"></div>
+
+        <div class="vignette"></div>
+
+        <div class="laser-bar" id="laserLine"></div>
+
+        <!-- WELCOME -->
+        <div class="center-welcome-panel" id="welcomePanel">
+            <div class="welcome-txt">WELCOME TO OUR SHOP</div>
+            <div class="sub-instruction">PLEASE UNWRAP YOUR HAIR</div>
+        </div>
+
+        <!-- FACE MESH -->
+        <div class="interactive-canvas">
+
+            <div class="spatial-tag" id="tagHair">
+                <div class="tag-label">//HAIR TYPE</div>
+                <div class="tag-value" id="valHair">COMPUTING...</div>
+            </div>
+
+            <div class="spatial-tag" id="tagStructure">
+                <div class="tag-label">//FACE STRUCTURE</div>
+                <div class="tag-value" id="valStructure">COMPUTING...</div>
+            </div>
+
+            <div class="spatial-tag" id="tagTone">
+                <div class="tag-label">//SKIN TYPE</div>
+                <div class="tag-value" id="valTone">COMPUTING...</div>
+            </div>
+
+            <div class="spatial-tag" id="tagJawline">
+                <div class="tag-label">//JAWLINE</div>
+                <div class="tag-value" id="valJawline">COMPUTING...</div>
+            </div>
+
+            <svg class="face-mesh-svg" viewBox="0 0 200 220">
+                <ellipse id="faceOvalGuide" class="alignment-oval" />
+                <path class="mesh-line" d="M100,25 L60,55 L50,110 L65,170 L100,200 L135,170 L150,110 L140,55 Z" fill="none" />
+                <circle class="biometric-dot" cx="100" cy="25" r="3" />
+                <circle class="biometric-dot" cx="60" cy="55" r="3" />
+                <circle class="biometric-dot" cx="140" cy="55" r="3" />
+                <circle class="biometric-dot" cx="100" cy="200" r="4" />
+            </svg>
+
+        </div>
+
+        <!-- BUTTON -->
+        <div class="primary-action-shell" id="actionBtnContainer">
+            <button class="scan-btn" id="triggerBtn" onclick="runSpatialExtraction()">
+                INITIALIZE BIOMETRICS
+            </button>
+        </div>
+
+        <!-- CONSULTATION PANEL -->
+        <div class="qa-consultation-window" id="consultationWindow">
+
+            <div class="qa-track-wrapper">
+
+                <!-- STEP 1 -->
+                <div class="qa-step-slide active-slide" id="step1">
+                    <div class="question-header">01 // SELECT SERVICE</div>
+                    <div class="options-flex-grid">
+                        <button class="option-button-node" onclick="selectOption(1,'Hair Cut',event)">Hair Cut</button>
+                        <button class="option-button-node" onclick="selectOption(1,'Beard Styling',event)">Beard Styling</button>
+                        <button class="option-button-node" onclick="selectOption(1,'Both',event)">Both</button>
+                    </div>
+                </div>
+
+                <!-- STEP 2 -->
+                <div class="qa-step-slide" id="step2">
+                    <div class="question-header">02 // OCCASION</div>
+                    <div class="options-flex-grid">
+                        <button class="option-button-node" onclick="selectOption(2,'Corporate',event)">Corporate</button>
+                        <button class="option-button-node" onclick="selectOption(2,'Party',event)">Party</button>
+                        <button class="option-button-node" onclick="selectOption(2,'Casual',event)">Casual</button>
+                    </div>
+                </div>
+
+                <!-- STEP 3 -->
+                <div class="qa-step-slide" id="step3">
+                    <div class="question-header">03 // HAIR PROBLEM</div>
+                    <div class="options-flex-grid">
+                        <button class="option-button-node" onclick="selectOption(3,'Volume',event)">Unruly Volume</button>
+                        <button class="option-button-node" onclick="selectOption(3,'Hairline',event)">Hairline Issue</button>
+                        <button class="option-button-node" onclick="selectOption(3,'Dryness',event)">Dryness</button>
+                    </div>
+                </div>
+
+                <!-- RESULTS -->
+                <div class="qa-step-slide" id="resultsSlide">
+
+                    <div class="question-header">AI RECOMMENDATIONS</div>
+
+                    <div class="results-grid" id="resultsGrid"></div>
+
+                    <!-- LIVE PREVIEW -->
+                    <div class="style-preview-shell" id="stylePreviewContainer">
+                        <div class="preview-style-name" id="previewStyleName">TEXTURED POMPADOUR</div>
+                        <div class="multi-angle-preview-grid">
+                            <div class="preview-angle-card">
+                                <div class="angle-label">FRONT</div>
+                                <div class="ai-preview-wrapper">
+                                    <img class="base-face" id="previewImgFront">
+                                    <img class="hair-overlay" id="hairFront">
+                                </div>
+                            </div>
+                            <div class="preview-angle-card">
+                                <div class="angle-label">LEFT</div>
+                                <div class="ai-preview-wrapper">
+                                    <img class="base-face" id="previewImgLeft">
+                                    <img class="hair-overlay" id="hairLeft">
+                                </div>
+                            </div>
+                            <div class="preview-angle-card">
+                                <div class="angle-label">RIGHT</div>
+                                <div class="ai-preview-wrapper">
+                                    <img class="base-face" id="previewImgRight">
+                                    <img class="hair-overlay" id="hairRight">
+                                </div>
+                            </div>
+                            <div class="preview-angle-card">
+                                <div class="angle-label">BACK</div>
+                                <div class="ai-preview-wrapper">
+                                    <img class="base-face" id="previewImgBack">
+                                    <img class="hair-overlay" id="hairBack">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="results-action-bar">
+                        <button class="nav-control-btn" onclick="backToQuestions()">
+                            ← BACK TO QUESTIONS
+                        </button>
+                        <button class="nav-control-btn" onclick="openFeedbackSection()">
+                            GIVE FEEDBACK
+                        </button>
+                    </div>
+
+                    <!-- ✅ FEEDBACK SECTION — ONLY ONE, CORRECT VERSION -->
+                    <div class="feedback-section" id="feedbackSection">
+
+                        <div class="feedback-title">FEEDBACK CENTER</div>
+
+                        <div class="feedback-question-block">
+                            <div class="feedback-question">01 // RATE OUR STYLING MODEL</div>
+                            <div class="feedback-options">
+                                <button class="feedback-option">EXCELLENT</button>
+                                <button class="feedback-option">GOOD</button>
+                                <button class="feedback-option">NEEDS IMPROVEMENT</button>
+                            </div>
+                        </div>
+
+                        <div class="feedback-question-block">
+                            <div class="feedback-question">02 // IS IT EASY TO USE</div>
+                            <div class="feedback-options">
+                                <button class="feedback-option">VERY EASY</button>
+                                <button class="feedback-option">EASY</button>
+                                <button class="feedback-option">CONFUSING</button>
+                            </div>
+                        </div>
+
+                        <div class="feedback-question-block">
+                            <div class="feedback-question">03 // SUGGESTIONS FOR IMPROVEMENT</div>
+                            <textarea class="feedback-textarea" placeholder="TYPE YOUR SUGGESTION HERE..."></textarea>
+                        </div>
+
+                        <button class="feedback-submit-btn">SUBMIT FEEDBACK</button>
+
+                    </div>
+                    <!-- END FEEDBACK SECTION -->
+
+                </div>
+
+            </div>
+
+            <!-- NAV -->
+            <div class="wizard-navigation-bar">
+                <button class="nav-control-btn" id="prevBtn" onclick="navigateWizard(-1)">BACK</button>
+                <button class="nav-control-btn" id="nextBtn" onclick="navigateWizard(1)" disabled>NEXT</button>
+                <button class="suggestion-submit-trigger" id="submitBtn" onclick="compileAIPortionFeedback()">GIVE ME SUGGESTION</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        let currentStep = 1;
+        let selections = {};
+        let lastCapturedFace = "";
+
+        const webcam = document.getElementById('webcam');
+
+        /* CAMERA */
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { webcam.srcObject = stream; });
+
+        /* OVAL ANIMATION */
+        gsap.fromTo("#faceOvalGuide",
+            { strokeDashoffset: 0 },
+            { strokeDashoffset: 30, duration: 1.5, repeat: -1, ease: "none" }
+        );
+
+        /* SCAN */
+        function runSpatialExtraction() {
+            const button = document.getElementById('triggerBtn');
+            button.innerText = "EXTRACTING GEOMETRY...";
+
+            let tl = gsap.timeline();
+
+            tl.to("#welcomePanel", { opacity: 0, y: -20, duration: 0.4 });
+
+            tl.fromTo("#laserLine",
+                { top: "0%", opacity: 1 },
+                { top: "100%", duration: 1.2, repeat: 2, yoyo: true }
+            );
+
+            tl.to(".biometric-dot", { opacity: 1, stagger: 0.1 }, "-=2");
+            tl.to(".mesh-line", { opacity: 0.4 }, "-=1");
+
+            tl.call(() => {
+                document.getElementById('valHair').innerText = "Curly Structured";
+                document.getElementById('valStructure').innerText = "Oval Symmetrical";
+                document.getElementById('valTone').innerText = "Warm Olive";
+                document.getElementById('valJawline').innerText = "Sharp Arc";
+
+                gsap.to(".spatial-tag", { opacity: 1, stagger: 0.15 });
+
+                // Hide scan button immediately
+                gsap.to("#actionBtnContainer", { opacity: 0, y: 20, duration: 0.4,
+                    onComplete: () => {
+                        document.getElementById('actionBtnContainer').style.display = 'none';
+                    }
+                });
+
+                // 3 seconds kaluchu → auto reveal consultation
+                setTimeout(() => {
+                    revealConsultationWizard();
+                }, 3000);
+            });
+        }
+
+        /* PANEL */
+        function revealConsultationWizard() {
+            const consultationWindow = document.getElementById('consultationWindow');
+
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = webcam.videoWidth;
+            captureCanvas.height = webcam.videoHeight;
+
+            const ctx = captureCanvas.getContext('2d');
+            ctx.translate(captureCanvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(webcam, 0, 0, captureCanvas.width, captureCanvas.height);
+
+            lastCapturedFace = captureCanvas.toDataURL('image/png');
+
+            const img = document.createElement('img');
+            img.src = lastCapturedFace;
+            img.style.position = 'absolute';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.style.left = '0';
+            img.style.top = '0';
+
+            document.getElementById('capturedFaceFrame').appendChild(img);
+            webcam.style.display = 'none';
+
+            // Shrink left side to 50vw with animation
+            gsap.to(".interactive-canvas", { width: "50vw", duration: 0.8, ease: "power3.inOut" });
+            gsap.to(".vignette", { width: "50vw", duration: 0.8, ease: "power3.inOut" });
+
+            // Slide in consultation panel
+            consultationWindow.style.display = 'block';
+            gsap.to(consultationWindow, { opacity: 1, x: "0%", duration: 0.8, ease: "power3.inOut" });
+        }
+
+        /* SELECT OPTION */
+        function selectOption(stepNum, value, event) {
+            const parent = document.getElementById(`step${stepNum}`);
+            parent.querySelectorAll('.option-button-node').forEach(btn => {
+                btn.classList.remove('selected-choice');
+            });
+            event.target.classList.add('selected-choice');
+            selections[`step${stepNum}`] = value;
+
+            document.getElementById('nextBtn').disabled = false;
+
+            if (stepNum === 3) {
+                document.getElementById('submitBtn').style.display = 'block';
+                document.getElementById('submitBtn').innerText = 'GIVE ME SUGGESTION';
+                document.getElementById('nextBtn').style.display = 'none';
+            }
+        }
+
+        /* NAV */
+        function navigateWizard(direction) {
+
+            // Step 1-la back press pannaa → scan page ku போ
+            if (currentStep === 1 && direction === -1) {
+                goBackToScanPage();
+                return;
+            }
+
+            const active = document.getElementById(`step${currentStep}`);
+            const next = document.getElementById(`step${currentStep + direction}`);
+
+            gsap.to(active, {
+                opacity: 0, x: direction === 1 ? -50 : 50, duration: 0.25,
+                onComplete: () => {
+                    active.classList.remove('active-slide');
+                    next.classList.add('active-slide');
+                    gsap.fromTo(next,
+                        { opacity: 0, x: direction === 1 ? 50 : -50 },
+                        { opacity: 1, x: 0, duration: 0.3 }
+                    );
+                }
+            });
+
+            currentStep += direction;
+
+            // ✅ Step 3-க்கு வரும்போது → skip button show, next hide
+            if (currentStep === 3) {
+                document.getElementById('submitBtn').style.display = 'block';
+                document.getElementById('submitBtn').innerText = 'SKIP & GET SUGGESTION';
+                document.getElementById('nextBtn').style.display = 'none';
+            } else {
+                document.getElementById('submitBtn').style.display = 'none';
+                document.getElementById('nextBtn').style.display = 'block';
+                document.getElementById('nextBtn').disabled = !selections[`step${currentStep}`];
+            }
+
+            document.getElementById('prevBtn').disabled = false;
+        }
+
+        /* SCAN PAGE KU THIRUMBU */
+        function goBackToScanPage() {
+            const consultationWindow = document.getElementById('consultationWindow');
+
+            // Consultation panel hide
+            gsap.to(consultationWindow, {
+                opacity: 0, x: "100%", duration: 0.6, ease: "power3.inOut",
+                onComplete: () => {
+                    consultationWindow.style.display = 'none';
+                    consultationWindow.style.opacity = '0';
+                    consultationWindow.style.transform = 'translateX(100%)';
+
+                    // Restore full screen canvas + vignette
+                    gsap.to(".interactive-canvas", { width: "100vw", duration: 0.6, ease: "power3.inOut" });
+                    gsap.to(".vignette", { width: "100vw", duration: 0.6, ease: "power3.inOut" });
+
+                    // Captured face frame reset
+                    const frame = document.getElementById('capturedFaceFrame');
+                    frame.innerHTML = '';
+                    frame.style.width = '50vw';
+
+                    // Webcam back
+                    webcam.style.display = 'block';
+
+                    // Scan button show — back to full screen center
+                    const actionBtn = document.getElementById('actionBtnContainer');
+                    actionBtn.style.left = '50%';
+                    actionBtn.style.display = 'block';
+                    gsap.fromTo(actionBtn,
+                        { opacity: 0, y: 20 },
+                        { opacity: 1, y: 0, duration: 0.4 }
+                    );
+
+                    // Welcome panel show — back to full screen center
+                    const wp = document.getElementById('welcomePanel');
+                    wp.style.left = '50%';
+                    wp.style.transform = 'translateX(-50%)';
+                    gsap.fromTo(wp,
+                        { opacity: 0, y: -20 },
+                        { opacity: 1, y: 0, duration: 0.4 }
+                    );
+
+                    // Tags hide
+                    gsap.to(".spatial-tag", { opacity: 0, duration: 0.3 });
+
+                    // Mesh dots & lines reset
+                    gsap.to(".biometric-dot", { opacity: 0, duration: 0.3 });
+                    gsap.to(".mesh-line", { opacity: 0, duration: 0.3 });
+
+                    // Scan button text reset
+                    document.getElementById('triggerBtn').innerText = "INITIALIZE BIOMETRICS";
+
+                    // State reset
+                    selections = {};
+                    currentStep = 1;
+                    lastCapturedFace = "";
+
+                    // Step slides reset
+                    document.querySelectorAll('.qa-step-slide').forEach(s => {
+                        s.classList.remove('active-slide');
+                        s.style.opacity = '0';
+                    });
+                    const step1 = document.getElementById('step1');
+                    step1.classList.add('active-slide');
+                    step1.style.opacity = '1';
+
+                    // Nav buttons reset
+                    document.querySelector('.wizard-navigation-bar').style.display = 'flex';
+                    document.getElementById('prevBtn').disabled = false;
+                    document.getElementById('nextBtn').disabled = true;
+                    document.getElementById('nextBtn').style.display = 'block';
+                    document.getElementById('submitBtn').style.display = 'none';
+
+                    // Option selections reset
+                    document.querySelectorAll('.option-button-node').forEach(btn => {
+                        btn.classList.remove('selected-choice');
+                    });
+
+                    // Feedback hide
+                    document.getElementById('feedbackSection').style.display = 'none';
+
+                    // Preview hide
+                    document.getElementById('stylePreviewContainer').style.display = 'none';
+
+                    // consultationWindow width reset
+                    gsap.set("#consultationWindow", { width: "50vw" });
+                }
+            });
+        }
+
+        /* RESULTS */
+        function compileAIPortionFeedback() {
+            gsap.to(".interactive-canvas", { opacity: 0, duration: 0.4 });
+            gsap.to("#capturedFaceFrame", { width: "100vw", duration: 0.8, ease: "power3.inOut" });
+            gsap.to("#capturedFaceFrame img", { left: "0vw", duration: 0.8, ease: "power3.inOut" });
+            gsap.to("#consultationWindow", { width: "100vw", duration: 0.8, ease: "power3.inOut" });
+
+            const styles = [
+                { name: "Textured Pompadour", type: "ai", desc: "Modern volume finish." },
+                { name: "Modern Quiff", type: "ai", desc: "Premium layered texture." },
+                { name: "Classic Side Part", type: "expert", desc: "Professional styling." },
+                { name: "Low Fade Crop", type: "expert", desc: "Minimal clean cut." }
+            ];
+
+            const grid = document.getElementById('resultsGrid');
+            grid.innerHTML = "";
+
+            styles.forEach(style => {
+                const card = document.createElement('div');
+                card.className = "recommendation-card";
+                card.onclick = () => selectStyleForPreview(card, style.name);
+                card.innerHTML = `
+                    <span class="card-badge ${style.type === "ai" ? "badge-ai" : "badge-expert"}">
+                        ${style.type === "ai" ? "AI SUGGESTION" : "EXPERT SUGGESTION"}
+                    </span>
+                    <div class="style-title">${style.name}</div>
+                    <div class="style-desc">${style.desc}</div>
+                `;
+                grid.appendChild(card);
+            });
+
+            const active = document.getElementById(`step${currentStep}`);
+            const results = document.getElementById('resultsSlide');
+
+            gsap.to(active, {
+                opacity: 0, x: -60, duration: 0.25,
+                onComplete: () => {
+                    active.classList.remove('active-slide');
+                    document.querySelector('.wizard-navigation-bar').style.display = 'none';
+                    results.classList.add('active-slide');
+                    gsap.fromTo(results,
+                        { opacity: 0, x: 60 },
+                        { opacity: 1, x: 0, duration: 0.3 }
+                    );
+                }
+            });
+        }
+
+        /* PREVIEW */
+        function selectStyleForPreview(cardElement, styleName) {
+            document.querySelectorAll('.recommendation-card').forEach(card => {
+                card.classList.remove('selected-preview');
+            });
+            cardElement.classList.add('selected-preview');
+            document.getElementById('resultsGrid').appendChild(cardElement);
+
+            document.getElementById('stylePreviewContainer').style.display = 'block';
+            document.getElementById('previewStyleName').innerText = styleName.toUpperCase();
+
+            document.getElementById('previewImgFront').src = lastCapturedFace;
+            document.getElementById('previewImgLeft').src = lastCapturedFace;
+            document.getElementById('previewImgRight').src = lastCapturedFace;
+            document.getElementById('previewImgBack').src = lastCapturedFace;
+
+            const slug = styleName.toLowerCase().replaceAll(" ", "-");
+            document.getElementById('hairFront').src = `styles/${slug}/front.png`;
+            document.getElementById('hairLeft').src = `styles/${slug}/left.png`;
+            document.getElementById('hairRight').src = `styles/${slug}/right.png`;
+            document.getElementById('hairBack').src = `styles/${slug}/back.png`;
+
+            gsap.fromTo(".preview-angle-card",
+                { opacity: 0, y: 30, scale: 0.95 },
+                { opacity: 1, y: 0, scale: 1, stagger: 0.08, duration: 0.45 }
+            );
+        }
+
+        /* BACK TO QUESTIONS */
+        function backToQuestions() {
+            const results = document.getElementById('resultsSlide');
+            const step1 = document.getElementById('step1');
+
+            // Hide feedback if open
+            const feedback = document.getElementById('feedbackSection');
+            feedback.style.display = 'none';
+
+            // Hide preview
+            document.getElementById('stylePreviewContainer').style.display = 'none';
+
+            // Reset selections highlight
+            document.querySelectorAll('.option-button-node').forEach(btn => {
+                btn.classList.remove('selected-choice');
+            });
+
+            // Reset state
+            selections = {};
+            currentStep = 1;
+
+            // Show nav bar again
+            document.querySelector('.wizard-navigation-bar').style.display = 'flex';
+            document.getElementById('prevBtn').disabled = false;
+            document.getElementById('nextBtn').disabled = true;
+            document.getElementById('nextBtn').style.display = 'block';
+            document.getElementById('submitBtn').style.display = 'none';
+
+            // Animate: results out → step1 in
+            gsap.to(results, {
+                opacity: 0, x: 60, duration: 0.25,
+                onComplete: () => {
+                    results.classList.remove('active-slide');
+                    step1.classList.add('active-slide');
+                    gsap.fromTo(step1,
+                        { opacity: 0, x: -60 },
+                        { opacity: 1, x: 0, duration: 0.3 }
+                    );
+                }
+            });
+        }
+
+        /* FEEDBACK OPEN */
+        function openFeedbackSection() {
+            const feedback = document.getElementById('feedbackSection');
+            feedback.style.display = 'flex';
+
+            gsap.fromTo(feedback,
+                { opacity: 0, y: 40 },
+                { opacity: 1, y: 0, duration: 0.6 }
+            );
+
+            // Smooth scroll to feedback
+            setTimeout(() => {
+                feedback.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+        }
+
+    </script>
+</body>
+</html>
